@@ -1,18 +1,48 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <WiFi.h>
 #include <Arduino.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "../lib/connect_Wifi.h"
 
-// put function declarations here:
-int myFunction(int, int);
+//Oled 128x64
+#define SCREEN_WIDTH 128 
+#define SCREEN_HEIGHT 64 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+
+//Wifi
+#define WIFI_STA_NAME "ship"
+#define WIFI_STA_PASS "b123456789"
+
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+    if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+  delay(2000);
+  display.clearDisplay();
+  display.setTextSize(1.5);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 5);
+  display.println("ssid: ship");
+  display.setCursor(0, 20);
+  display.println("pass: b123456789");
+  display.display(); 
+
+  connecnt_Wifi(WIFI_STA_NAME, WIFI_STA_PASS);
+  display.clearDisplay();
+  display.setCursor(0, 10);
+  display.println("connected..");
+  display.display(); 
+
+
 }
+
 
 void loop() {
-  // put your main code here, to run repeatedly:
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
-}
