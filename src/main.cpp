@@ -13,8 +13,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 
 //Wifi
-#define WIFI_STA_NAME "ship"
-#define WIFI_STA_PASS "b123456789"
+const char *SSID = "ship";
+const char *PASSWORD = "b123456789";
 
 
 void setup() {
@@ -28,12 +28,12 @@ void setup() {
   display.setTextSize(1.5);
   display.setTextColor(WHITE);
   display.setCursor(0, 5);
-  display.println("ssid: ship");
+  display.printf("ssid: %s", SSID);
   display.setCursor(0, 20);
-  display.println("pass: b123456789");
+  display.printf("pass: %s", PASSWORD);
   display.display(); 
 
-  connecnt_Wifi(WIFI_STA_NAME, WIFI_STA_PASS);
+  connecnt_Wifi(SSID, PASSWORD);
   display.clearDisplay();
   display.setCursor(0, 10);
   display.println("connected..");
