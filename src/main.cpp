@@ -6,7 +6,7 @@
 #include <Adafruit_SSD1306.h>
 #include "../lib/connect_Wifi.h"
 
-//Oled 128x64
+//Oled 128x64 SCL=> GPIO22 , SDA=>  GPIO21
 #define SCREEN_WIDTH 128 
 #define SCREEN_HEIGHT 64 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
