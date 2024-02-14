@@ -13,7 +13,7 @@
 #define led_sos 19
 #define StatusShip_Pin 23
 bool status_sos = false;   
-
+bool status_ship = false; 
 //Button Interrupt GPIO2
 struct Button {
     const uint8_t PIN;
@@ -38,7 +38,8 @@ void IRAM_ATTR isr() {
 
 void IRAM_ATTR IO_INT_ISR()
 {
-  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  status_ship=!status_ship;
+  digitalWrite(LED_BUILTIN, status_ship);
 }
 
 //Oled 128x64 SCL=> GPIO22 , SDA=>  GPIO21
