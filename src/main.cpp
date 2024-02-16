@@ -10,10 +10,12 @@
 #include "../lib/connect_Wifi.h"
 #include "../lib/convert_double_to_string.h"
 
-#define led_sos 19
+#define Led_status 19
 #define StatusShip_Pin 23
 bool status_sos = false;   
-bool status_ship = false; 
+bool status_ship = false;
+bool status_help = false; 
+int count_sos = 0;
 //Button Interrupt GPIO2
 struct Button {
     const uint8_t PIN;
@@ -31,15 +33,19 @@ void IRAM_ATTR isr() {
   if (button_time - last_button_time > 250)
   {
     button1.numberKeyPresses++;
-    button1.pressed = true;
+    status_sos=!status_sos;
     last_button_time = button_time;
+    digitalWrite(Led_status, status_ship || status_sos);
+
   }
+
 }
 
 void IRAM_ATTR IO_INT_ISR()
 {
   status_ship=!status_ship;
-  digitalWrite(LED_BUILTIN, status_ship);
+  digitalWrite(Led_status, status_ship || status_sos);
+
 }
 
 //Oled 128x64 SCL=> GPIO22 , SDA=>  GPIO21
@@ -89,26 +95,20 @@ void setup() {
   display.println("Connecting..");
   display.display(); 
 
-  while (connect_gps())
+  // while (connect_gps())
 
   //intterrupt
     Serial.begin(115200);
+    pinMode(Led_status, OUTPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
     pinMode(button1.PIN, INPUT_PULLUP);
     attachInterrupt(button1.PIN, isr, RISING);
-    pinMode(led_sos, OUTPUT);
-    pinMode(LED_BUILTIN, OUTPUT);
     pinMode(StatusShip_Pin, INPUT);
     attachInterrupt(StatusShip_Pin, IO_INT_ISR, FAIL); 
 }
 
 
 void loop() {
-    digitalWrite(led_sos,status_sos);
-    if (button1.pressed) {
-        Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
-        button1.pressed = false;
-        status_sos=!status_sos;
-    }
     if (Serial2.available() > 0) {
       if (gps.encode(Serial2.read())) {
         if (gps.location.isValid()) {
