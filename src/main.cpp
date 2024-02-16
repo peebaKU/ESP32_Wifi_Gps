@@ -10,20 +10,23 @@
 #include "../lib/connect_Wifi.h"
 #include "../lib/convert_double_to_string.h"
 
+TaskHandle_t Task1;
+TaskHandle_t Task2;
+
 #define Led_status 19
 #define StatusShip_Pin 23
 bool status_sos = false;   
 bool status_ship = false;
 bool status_help = false; 
 int count_sos = 0;
-//Button Interrupt GPIO2
+//Button Interrupt GPIO18
 struct Button {
     const uint8_t PIN;
     uint32_t numberKeyPresses;
     bool pressed;
 };
 
-Button button1 = {2, 0, false};
+Button button1 = {18, 0, false};
 
 unsigned long button_time = 0;  
 unsigned long last_button_time = 0; 
@@ -33,10 +36,7 @@ void IRAM_ATTR isr() {
   if (button_time - last_button_time > 250)
   {
     button1.numberKeyPresses++;
-    status_sos=!status_sos;
-    last_button_time = button_time;
-    digitalWrite(Led_status, status_ship || status_sos);
-
+    button1.pressed = true;
   }
 
 }
@@ -47,6 +47,7 @@ void IRAM_ATTR IO_INT_ISR()
   digitalWrite(Led_status, status_ship || status_sos);
 
 }
+
 
 //Oled 128x64 SCL=> GPIO22 , SDA=>  GPIO21
 #define SCREEN_WIDTH 128 
@@ -62,7 +63,8 @@ const char *PASSWORD = "b123456789";
 #define GPS_BAUDRATE 9600
 TinyGPSPlus gps;  
 int connect_gps();
-
+void Task1code( void * pvParameters );
+void Task2code( void * pvParameters );
 
 void setup() {
   Serial.begin(115200);
@@ -102,13 +104,53 @@ void setup() {
     pinMode(Led_status, OUTPUT);
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(button1.PIN, INPUT_PULLUP);
-    attachInterrupt(button1.PIN, isr, RISING);
+    attachInterrupt(button1.PIN, isr, FALLING);
     pinMode(StatusShip_Pin, INPUT);
-    attachInterrupt(StatusShip_Pin, IO_INT_ISR, FAIL); 
+    attachInterrupt(StatusShip_Pin, IO_INT_ISR, FAIL);
+    delay(500); 
+    
+    xTaskCreatePinnedToCore(
+                    Task1code,   /* Task function. */
+                    "Task1",     /* name of task. */
+                    4096,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &Task1,      /* Task handle to keep track of created task */
+                    0);          /* pin task to core 0 */                  
+  delay(500); 
+  
+  xTaskCreatePinnedToCore(
+                    Task2code,  
+                    "Task2",     
+                    4096,       
+                    NULL,        
+                    1,           
+                    &Task2,      
+                    1);         
+    delay(500); 
 }
 
 
-void loop() {
+void Task1code( void * pvParameters ){
+  Serial.print("Task1 running on core ");
+  Serial.println(xPortGetCoreID());
+
+  while(true){
+    if (button1.pressed) {
+        Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
+        button1.pressed = false;
+        status_sos=!status_sos;
+        digitalWrite(Led_status, status_ship || status_sos);
+    }
+    delay(10);
+  } 
+}
+
+void Task2code( void * pvParameters ){
+  Serial.print("Task2 running on core ");
+  Serial.println(xPortGetCoreID());
+
+   while(true){
     if (Serial2.available() > 0) {
       if (gps.encode(Serial2.read())) {
         if (gps.location.isValid()) {
@@ -127,11 +169,21 @@ void loop() {
         }else {
           Serial.println(F("Disconnect Gps"));
         }
-        Serial.println();
+        Serial.println(status_sos);
+        Serial.println(status_ship);
+        delay(1000);
     }
   }
+  
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
+  }
+}
+
+
+
+
+void loop() {
 }
 
 
