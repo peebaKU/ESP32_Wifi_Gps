@@ -37,6 +37,7 @@ void IRAM_ATTR isr() {
   {
     button1.numberKeyPresses++;
     button1.pressed = true;
+    last_button_time = button_time;
   }
 
 }
@@ -137,7 +138,6 @@ void Task1code( void * pvParameters ){
 
   while(true){
     if (button1.pressed) {
-        Serial.printf("Button has been pressed %u times\n", button1.numberKeyPresses);
         button1.pressed = false;
         status_sos=!status_sos;
         digitalWrite(Led_status, status_ship || status_sos);
