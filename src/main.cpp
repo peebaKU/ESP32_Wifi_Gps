@@ -2,13 +2,17 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <stdio.h>
+#include <string.h>
 #include <Arduino.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include <TinyGPSPlus.h>
 #include <Adafruit_GFX.h>
 #include <SoftwareSerial.h>
 #include <Adafruit_SSD1306.h>
 #include "../lib/connect_Wifi.h"
 #include "../lib/convert_double_to_string.h"
+#include "../lib/patch_location.h"
 
 TaskHandle_t Task1;
 TaskHandle_t Task2;
@@ -19,6 +23,16 @@ bool status_sos = false;
 bool status_ship = false;
 bool status_help = false; 
 int count_sos = 0;
+double num_lat;
+double num_lng;
+
+const String boatID = "65e08c51d545c2aab1eee3a8";
+const String baseURL = "https://boat-protector-backend.onrender.com/";
+const String UpdateLocation_Url = baseURL+"boats/"+boatID+"/position";
+
+
+int timestamp = 9999999;
+
 //Button Interrupt GPIO18
 struct Button {
     const uint8_t PIN;
@@ -57,8 +71,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 
 //Wifi
-const char *SSID = "ship";
-const char *PASSWORD = "b123456789";
+const String SSID = "ship";
+const String PASSWORD = "b123456789";
 
 //GPS GPIO17=>Rx, GPIO16=>Tx
 #define GPS_BAUDRATE 9600
@@ -66,6 +80,8 @@ TinyGPSPlus gps;
 int connect_gps();
 void Task1code( void * pvParameters );
 void Task2code( void * pvParameters );
+
+void sendPatchRequest(String url, int timestamp, double latitude, double longitude);
 
 void setup() {
   Serial.begin(115200);
@@ -113,7 +129,7 @@ void setup() {
     xTaskCreatePinnedToCore(
                     Task1code,   /* Task function. */
                     "Task1",     /* name of task. */
-                    4096,       /* Stack size of task */
+                    10000,       /* Stack size of task */
                     NULL,        /* parameter of the task */
                     1,           /* priority of the task */
                     &Task1,      /* Task handle to keep track of created task */
@@ -123,7 +139,7 @@ void setup() {
   xTaskCreatePinnedToCore(
                     Task2code,  
                     "Task2",     
-                    4096,       
+                    10000,       
                     NULL,        
                     1,           
                     &Task2,      
@@ -144,6 +160,7 @@ void Task1code( void * pvParameters ){
     }
     delay(10);
   } 
+  
 }
 
 void Task2code( void * pvParameters ){
@@ -154,8 +171,10 @@ void Task2code( void * pvParameters ){
     if (Serial2.available() > 0) {
       if (gps.encode(Serial2.read())) {
         if (gps.location.isValid()) {
-          char* lat = doubleToString(gps.location.lat());
-          char* lng = doubleToString(gps.location.lng());     
+          String lat = (String)gps.location.lat();
+          String lng = (String)gps.location.lng();
+          num_lat = gps.location.lat();
+          num_lng = gps.location.lng();
           Serial.print(F("- latitude: "));
           Serial.println(lat);
           Serial.print(F("- longitude: "));
@@ -166,6 +185,7 @@ void Task2code( void * pvParameters ){
           display.setCursor(0, 20);
           display.printf("lng: %s",lng);
           display.display();
+          sendPatchRequest(UpdateLocation_Url, timestamp, num_lat, num_lng);
         }else {
           Serial.println(F("Disconnect Gps"));
         }

@@ -1,7 +1,7 @@
 #ifndef CONNECTWIFI_H
 #define CONNECTWIFI_H
 
-void connecnt_Wifi(const char* WIFI_STA_NAME,const char* WIFI_STA_PASS){
+void connecnt_Wifi(String WIFI_STA_NAME,String WIFI_STA_PASS){
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.println();
   Serial.println();
