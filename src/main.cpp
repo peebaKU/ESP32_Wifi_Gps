@@ -10,27 +10,33 @@
 #include <Adafruit_GFX.h>
 #include <SoftwareSerial.h>
 #include <Adafruit_SSD1306.h>
-#include "../lib/connect_Wifi.h"
-#include "../lib/convert_double_to_string.h"
-#include "../lib/patch_location.h"
+#include "../lib/ConnectWifi.h"
+#include "../lib/ConvertDoubleToString.h"
+#include "../lib/PatchLocation.h"
+#include "../lib/GetStatusShip.h"
+#include "../lib/PostStatus.h"
+#include "../lib/setStatusToNormal.h"
 
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
 #define Led_status 19
 #define StatusShip_Pin 23
+String StatusShip = "normal";
 bool status_sos = false;   
 bool status_ship = false;
-bool status_help = false; 
-int count_sos = 0;
-double num_lat;
-double num_lng;
+bool status_help = false;
+double num_lat = 0.00;
+double num_lng = 0.00;
 
 const String boatID = "65e08c51d545c2aab1eee3a8";
 const String baseURL = "https://boat-protector-backend.onrender.com/";
+const String GetStatusShip_Url = baseURL+"boats/"+boatID;
 const String UpdateLocation_Url = baseURL+"boats/"+boatID+"/position";
+const String UpdateStatus_Url = baseURL+"boats/"+boatID+"/emergency";
+const String PatchStatusNormal_Url = baseURL+"boats/"+boatID+"/emergency/cancel";
 
-
+String  textStatus = "normal";
 int timestamp = 9999999;
 
 //Button Interrupt GPIO18
@@ -59,7 +65,10 @@ void IRAM_ATTR isr() {
 void IRAM_ATTR IO_INT_ISR()
 {
   status_ship=!status_ship;
-  digitalWrite(Led_status, status_ship || status_sos);
+  if(status_ship){
+  status_sos = false;
+  }
+  digitalWrite(Led_status, status_ship);
 
 }
 
@@ -155,48 +164,87 @@ void Task1code( void * pvParameters ){
   while(true){
     if (button1.pressed) {
         button1.pressed = false;
-        status_sos=!status_sos;
-        digitalWrite(Led_status, status_ship || status_sos);
+        if(!status_ship){
+          status_sos=!status_sos;
+        }
+        digitalWrite(Led_status, (status_ship || status_sos));
     }
+    digitalWrite(Led_status, (status_ship || status_sos));
     delay(10);
-  } 
+  }
   
 }
 
 void Task2code( void * pvParameters ){
   Serial.print("Task2 running on core ");
   Serial.println(xPortGetCoreID());
-
+   bool firstGet = true;
    while(true){
-    if (Serial2.available() > 0) {
-      if (gps.encode(Serial2.read())) {
-        if (gps.location.isValid()) {
-          String lat = (String)gps.location.lat();
-          String lng = (String)gps.location.lng();
-          num_lat = gps.location.lat();
-          num_lng = gps.location.lng();
-          Serial.print(F("- latitude: "));
-          Serial.println(lat);
-          Serial.print(F("- longitude: "));
-          Serial.println(lng);
-          display.clearDisplay();
-          display.setCursor(0, 5);
-          display.printf("lat: %s",lat);
-          display.setCursor(0, 20);
-          display.printf("lng: %s",lng);
-          display.display();
-          sendPatchRequest(UpdateLocation_Url, timestamp, num_lat, num_lng);
-        }else {
-          Serial.println(F("Disconnect Gps"));
+    if((status_ship || status_sos) || textStatus !="normal")//&& (num_lat != 0.00 && num_lng != 0.00)
+    {
+        StatusShip = getStatusShip(GetStatusShip_Url);
+
+        if(!status_ship && !status_sos){
+          patchStatusToNormal(PatchStatusNormal_Url);
         }
-        Serial.println(status_sos);
-        Serial.println(status_ship);
-        delay(1000);
+
+        if(StatusShip == "normal" && firstGet){
+          if(status_ship){
+            textStatus = "sink";
+            postMessage(UpdateStatus_Url, 1000, num_lat, num_lng, "sink");
+            
+          }
+          else if(status_sos){
+            textStatus = "SOS";
+             postMessage(UpdateStatus_Url, 1000, num_lat, num_lng, "SOS");
+          }
+          firstGet = false;
+
+        }
+        else if(StatusShip == "normal"){
+          textStatus = "normal";          
+          status_ship = false;
+          status_sos = false;
+          firstGet = true;
+          
+        }else if(StatusShip == "SOS" && status_ship){                  
+          textStatus = "sink";
+          postMessage(UpdateStatus_Url, 1000, num_lat, num_lng, "sink");
+        }else if(StatusShip == "sink" && status_sos){                      
+          textStatus = "SOS";
+          postMessage(UpdateStatus_Url, 1000, num_lat, num_lng, "SOS");
+        }
+    }else{
+      if (Serial2.available() > 0) {
+        if (gps.encode(Serial2.read())) {
+          if (gps.location.isValid()) {
+            String lat = (String)gps.location.lat();
+            String lng = (String)gps.location.lng();
+            num_lat = gps.location.lat();
+            num_lng = gps.location.lng();
+            Serial.print(F("- latitude: "));
+            Serial.println(lat);
+            Serial.print(F("- longitude: "));
+            Serial.println(lng);
+            display.clearDisplay();
+            display.setCursor(0, 5);
+            display.printf("lat: %s",lat);
+            display.setCursor(0, 20);
+            display.printf("lng: %s",lng);
+            display.display();
+            sendPatchRequest(UpdateLocation_Url, timestamp, num_lat, num_lng);
+          }else {
+            Serial.println(F("Disconnect Gps"));
+          }
+          Serial.println(status_sos);
+          Serial.println(status_ship);
+          delay(1000);
+      }
     }
-  }
   
-  if (millis() > 5000 && gps.charsProcessed() < 10)
-    Serial.println(F("No GPS data received: check wiring"));
+    if (millis() > 5000 && gps.charsProcessed() < 10)
+      Serial.println(F("No GPS data received: check wiring"));
+    }
   }
 }
 
