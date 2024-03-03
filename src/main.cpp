@@ -182,12 +182,16 @@ void Task2code( void * pvParameters ){
    while(true){
     if((status_ship || status_sos) || textStatus !="normal")//&& (num_lat != 0.00 && num_lng != 0.00)
     {
-        StatusShip = getStatusShip(GetStatusShip_Url);
 
         if(!status_ship && !status_sos){
           patchStatusToNormal(PatchStatusNormal_Url);
-        }
+          textStatus = "normal";
+          firstGet = true;
 
+        }else{
+          
+        StatusShip = getStatusShip(GetStatusShip_Url);
+        
         if(StatusShip == "normal" && firstGet){
           if(status_ship){
             textStatus = "sink";
@@ -214,6 +218,7 @@ void Task2code( void * pvParameters ){
           textStatus = "SOS";
           postMessage(UpdateStatus_Url, 1000, num_lat, num_lng, "SOS");
         }
+    }
     }else{
       if (Serial2.available() > 0) {
         if (gps.encode(Serial2.read())) {
