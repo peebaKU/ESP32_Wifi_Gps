@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <stdio.h>
+#include <QRCode.h>
 #include <string.h>
 #include <Arduino.h>
 #include <HTTPClient.h>
@@ -12,6 +13,7 @@
 #include <Adafruit_SSD1306.h>
 #include "../lib/ConnectWifi.h"
 #include "../lib/ConvertDoubleToString.h"
+#include "../lib/GenerateQR.h"
 #include "../lib/PatchLocation.h"
 #include "../lib/GetStatusShip.h"
 #include "../lib/PostStatus.h"
@@ -29,7 +31,7 @@ bool status_help = false;
 double num_lat = 0.00;
 double num_lng = 0.00;
 
-const String boatID = "65e08c51d545c2aab1eee3a8";
+const String boatID = "65d9bd0d1d75a5b0f7b7e095";
 const String baseURL = "https://boat-protector-backend.onrender.com/";
 const String GetStatusShip_Url = baseURL+"boats/"+boatID;
 const String UpdateLocation_Url = baseURL+"boats/"+boatID+"/position";
@@ -132,7 +134,7 @@ void setup() {
     pinMode(button1.PIN, INPUT_PULLUP);
     attachInterrupt(button1.PIN, isr, FALLING);
     pinMode(StatusShip_Pin, INPUT);
-    attachInterrupt(StatusShip_Pin, IO_INT_ISR, FAIL);
+    attachInterrupt(StatusShip_Pin, IO_INT_ISR, FALLING);
     delay(500); 
     
     xTaskCreatePinnedToCore(
@@ -187,7 +189,7 @@ void Task2code( void * pvParameters ){
           patchStatusToNormal(PatchStatusNormal_Url);
           textStatus = "normal";
           firstGet = true;
-
+          continue;
         }else{
           
         StatusShip = getStatusShip(GetStatusShip_Url);
