@@ -1,10 +1,8 @@
-#include <qrcode.h>
-#include <examples/OLED_featherwing/OLED_featherwing.ino>
 #ifndef GenerateQR
 #define GenerateQR 
-void generateQR(char *url){
-  const int SCREEN_WIDTH = 128;
-  const int SCREEN_HEIGHT = 64;
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+void generateQR(char *url, Adafruit_SSD1306 display){
   display.clearDisplay();
   
   // Generate QR code for google.com
