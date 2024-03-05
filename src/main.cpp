@@ -18,6 +18,10 @@
 #include "../lib/GetStatusShip.h"
 #include "../lib/PostStatus.h"
 #include "../lib/setStatusToNormal.h"
+#include "../lib/CheckID.h"
+#include "../lib/shortLink.h"
+#include "../lib/CheckLogin.h"
+
 
 TaskHandle_t Task1;
 TaskHandle_t Task2;
@@ -31,12 +35,13 @@ bool status_help = false;
 double num_lat = 0.00;
 double num_lng = 0.00;
 
-const String boatID = "65d9bd0d1d75a5b0f7b7e095";
+String boatID ;
 const String baseURL = "https://boat-protector-backend.onrender.com/";
 const String GetStatusShip_Url = baseURL+"boats/"+boatID;
 const String UpdateLocation_Url = baseURL+"boats/"+boatID+"/position";
 const String UpdateStatus_Url = baseURL+"boats/"+boatID+"/emergency";
 const String PatchStatusNormal_Url = baseURL+"boats/"+boatID+"/emergency/cancel";
+const String Register_Url = "https://boat-map-website.vercel.app/auth/register/";
 
 String  textStatus = "normal";
 int timestamp = 9999999;
@@ -111,7 +116,29 @@ void setup() {
   display.printf("pass: %s", PASSWORD);
   display.display(); 
 
-  connecnt_Wifi(SSID, PASSWORD);
+  String Mac = connecnt_Wifi(SSID, PASSWORD);
+  String ID = Mac+Mac;
+  boatID = ID;
+  bool firstCheckID = true;
+  String link = Register_Url+ID;  
+  String shortLink = makeTinyURL(link);
+    const int length = shortLink.length(); 
+  
+    // declaring character array (+1 for null terminator) 
+    char* char_array = new char[length]; 
+  
+    // copying the contents of the 
+    // string to char array 
+    strcpy(char_array, shortLink.c_str()); 
+  checkUserID(ID);
+  String urlCheckID = baseURL+"boats/"+ID; 
+  while(checkLogin(urlCheckID)){
+      if(firstCheckID){
+        generateQR(char_array,display);
+        Serial.println(char_array);
+        firstCheckID = false;
+      }
+  }
   display.clearDisplay();
   display.setCursor(0, 10);
   display.println("Connected..");

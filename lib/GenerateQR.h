@@ -4,8 +4,8 @@
 #define SCREEN_HEIGHT 64
 void generateQR(char *url, Adafruit_SSD1306 display){
   display.clearDisplay();
-  
   // Generate QR code for google.com
+  Serial.println(url);
   QRCode qrcode;
   uint8_t qrcodeData[qrcode_getBufferSize(3)]; // Change version here
   qrcode_initText(&qrcode, qrcodeData, 3, 0, url); // Change URL here
