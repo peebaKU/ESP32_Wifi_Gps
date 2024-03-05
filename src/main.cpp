@@ -36,12 +36,7 @@ double num_lat = 0.00;
 double num_lng = 0.00;
 
 String boatID ;
-const String baseURL = "https://boat-protector-backend.onrender.com/";
-const String GetStatusShip_Url = baseURL+"boats/"+boatID;
-const String UpdateLocation_Url = baseURL+"boats/"+boatID+"/position";
-const String UpdateStatus_Url = baseURL+"boats/"+boatID+"/emergency";
-const String PatchStatusNormal_Url = baseURL+"boats/"+boatID+"/emergency/cancel";
-const String Register_Url = "https://boat-map-website.vercel.app/auth/register/";
+String baseURL = "https://boat-protector-backend.onrender.com/";
 
 String  textStatus = "normal";
 int timestamp = 9999999;
@@ -120,6 +115,7 @@ void setup() {
   String ID = Mac+Mac;
   boatID = ID;
   bool firstCheckID = true;
+  String Register_Url = "https://boat-map-website.vercel.app/auth/register/";
   String link = Register_Url+ID;  
   String shortLink = makeTinyURL(link);
     const int length = shortLink.length(); 
@@ -212,7 +208,11 @@ void Task2code( void * pvParameters ){
     if((status_ship || status_sos) || textStatus !="normal")//&& (num_lat != 0.00 && num_lng != 0.00)
     {
 
+        String GetStatusShip_Url = baseURL+"boats/"+boatID;
+        String UpdateStatus_Url = baseURL+"boats/"+boatID+"/emergency";
+        String PatchStatusNormal_Url = baseURL+"boats/"+boatID+"/emergency/cancel";
         if(!status_ship && !status_sos){
+          
           patchStatusToNormal(PatchStatusNormal_Url);
           textStatus = "normal";
           firstGet = true;
@@ -249,6 +249,8 @@ void Task2code( void * pvParameters ){
         }
     }
     }else{
+      String UpdateLocation_Url = baseURL+"boats/"+boatID+"/position";
+
       if (Serial2.available() > 0) {
         if (gps.encode(Serial2.read())) {
           if (gps.location.isValid()) {
